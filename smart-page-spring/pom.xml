@@ -22,7 +22,8 @@
         <module>smart-page-spring-core</module>
         <module>smart-page-spring-test</module>
         <module>smart-page-spring-sql</module>
-        <module>smart-page-spring-sql-example</module>
+        <module>smart-page-spring-jdbc-example</module>
+        <module>smart-page-spring-r2dbc-example</module>
         <module>smart-page-spring-mongo</module>
         <module>smart-page-spring-mongo-example</module>
     </modules>

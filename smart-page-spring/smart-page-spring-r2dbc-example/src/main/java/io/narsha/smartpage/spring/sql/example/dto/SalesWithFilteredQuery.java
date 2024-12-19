@@ -1,4 +1,4 @@
-package io.narsha.smartpage.spring.sql.example;
+package io.narsha.smartpage.spring.sql.example.dto;
 
 import io.narsha.smartpage.core.annotations.DataTableProperty;
 import io.narsha.smartpage.spring.sql.SqlDataTable;
@@ -13,7 +13,7 @@ import lombok.Setter;
         from sale
         join item on item.id = sale.item_id
         join store on store.id = sale.store_id
-        where :storeName is null or store.name like :storeName
+        where (:storeName is null or store.name like :storeName)
         group by item.id, item.name, store.id, store.name
         """)
 @Getter

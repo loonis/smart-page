@@ -16,7 +16,7 @@ import org.apache.commons.lang3.StringUtils;
  *
  * @param <T> type of the target DTO
  */
-public class JdbcQueryParser<T> {
+public class SqlQueryParser<T> {
 
   private StringBuilder query = new StringBuilder();
   private StringBuilder countQuery = new StringBuilder();
@@ -29,7 +29,7 @@ public class JdbcQueryParser<T> {
    * @param queryFilter queryFilter
    * @param jdbcFilterRegistrationService jdbcFilterRegistrationService
    */
-  public JdbcQueryParser(
+  public SqlQueryParser(
       SmartPageQuery<T> queryFilter, JdbcFilterRegistrationService jdbcFilterRegistrationService) {
     this.queryFilter = queryFilter;
     this.jdbcFilterRegistrationService = jdbcFilterRegistrationService;

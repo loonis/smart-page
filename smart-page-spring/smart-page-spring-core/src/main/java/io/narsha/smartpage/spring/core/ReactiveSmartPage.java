@@ -1,26 +1,27 @@
 package io.narsha.smartpage.spring.core;
 
-import io.narsha.smartpage.core.QueryExecutor;
+import io.narsha.smartpage.core.ReactiveQueryExecutor;
 import io.narsha.smartpage.core.SmartPageQuery;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
+import reactor.core.publisher.Mono;
 
 /**
  * Smart Page entrypoint
  *
  * @param <P> kind of dto
  */
-public abstract class SmartPage<P> extends AbstractSmartPage<P> {
+public abstract class ReactiveSmartPage<P> extends AbstractSmartPage<P> {
 
-  private final QueryExecutor<P> executor;
+  private final ReactiveQueryExecutor<P> executor;
 
   /**
    * constructor
    *
    * @param executor executor
    */
-  public SmartPage(QueryExecutor<P> executor) {
+  public ReactiveSmartPage(ReactiveQueryExecutor<P> executor) {
     this.executor = executor;
   }
 
@@ -32,7 +33,7 @@ public abstract class SmartPage<P> extends AbstractSmartPage<P> {
    * @param <T> targeted DTO type
    * @return the http response entity
    */
-  public <T> ResponseEntity<List<T>> asResponseEntity(SmartPageQuery<T> query) {
+  public <T> Mono<ResponseEntity<List<T>>> asResponseEntity(SmartPageQuery<T> query) {
     return asResponseEntity(query, null);
   }
 
@@ -45,13 +46,18 @@ public abstract class SmartPage<P> extends AbstractSmartPage<P> {
    * @param <T> targeted DTO type
    * @return the http response entity
    */
-  public <T> ResponseEntity<List<T>> asResponseEntity(SmartPageQuery<T> query, P extraParameters) {
+  public <T> Mono<ResponseEntity<List<T>>> asResponseEntity(
+      SmartPageQuery<T> query, P extraParameters) {
     var result = executor.execute(query, extraParameters);
-    if (CollectionUtils.isEmpty(result.data())) {
-      return ResponseEntity.noContent().build();
-    }
 
-    final var headers = generatePaginationHeaders(query.page(), query.size(), result);
-    return ResponseEntity.ok().headers(headers).body(result.data());
+    return result.map(
+        r -> {
+          if (CollectionUtils.isEmpty(r.data())) {
+            return ResponseEntity.noContent().build();
+          }
+
+          final var headers = generatePaginationHeaders(query.page(), query.size(), r);
+          return ResponseEntity.ok().headers(headers).body(r.data());
+        });
   }
 }

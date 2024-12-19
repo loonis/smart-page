@@ -1,7 +1,7 @@
 package io.narsha.smartpage.spring.sql;
 
 import io.narsha.smartpage.core.PropertyFilter;
-import io.narsha.smartpage.core.QueryExecutor;
+import io.narsha.smartpage.core.ReactiveQueryExecutor;
 import io.narsha.smartpage.core.RowMapper;
 import io.narsha.smartpage.core.SmartPageQuery;
 import io.narsha.smartpage.core.SmartPageResult;
@@ -14,33 +14,34 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.r2dbc.core.DatabaseClient;
+import reactor.core.publisher.Mono;
 
 /** In charge of the sql query execution */
-public class JdbcQueryExecutor implements QueryExecutor<Map<String, Object>> {
+public class R2dbcQueryExecutor implements ReactiveQueryExecutor<Map<String, Object>> {
 
-  private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final DatabaseClient databaseClient;
   private final JdbcFilterRegistrationService jdbcFilterRegistrationService;
   private final RowMapper rowMapper;
 
   /**
    * constructor
    *
-   * @param jdbcTemplate jdbcTemplate
+   * @param databaseClient databaseClient
    * @param jdbcFilterRegistrationService jdbcFilterRegistrationService
    * @param rowMapper rowMapper
    */
-  public JdbcQueryExecutor(
-      NamedParameterJdbcTemplate jdbcTemplate,
+  public R2dbcQueryExecutor(
+      DatabaseClient databaseClient,
       JdbcFilterRegistrationService jdbcFilterRegistrationService,
       RowMapper rowMapper) {
-    this.jdbcTemplate = jdbcTemplate;
+    this.databaseClient = databaseClient;
     this.jdbcFilterRegistrationService = jdbcFilterRegistrationService;
     this.rowMapper = rowMapper;
   }
 
   @Override
-  public <T> SmartPageResult<T> execute(
+  public <T> Mono<SmartPageResult<T>> execute(
       SmartPageQuery<T> paginatedFilteredQuery, Map<String, Object> extraParameters) {
     final var jdbcQueryParser =
         new SqlQueryParser<>(paginatedFilteredQuery, jdbcFilterRegistrationService);
@@ -55,24 +56,40 @@ public class JdbcQueryExecutor implements QueryExecutor<Map<String, Object>> {
       params.putAll(extraParameters);
     }
 
-    final var data =
-        this.jdbcTemplate.query(
-            jdbcQueryParser.getQuery(),
-            params,
-            rs -> {
-              return extractResultSet(paginatedFilteredQuery, rowMapper, rs);
+    Mono<List<T>> data =
+        databaseClient
+            .sql(jdbcQueryParser.getQuery())
+            .bindValues(params)
+            .map((row, metadata) -> extractRow(paginatedFilteredQuery, rowMapper, row))
+            .all()
+            .collectList();
+
+    Mono<Integer> count =
+        databaseClient
+            .sql(jdbcQueryParser.getCountQuery())
+            .bindValues(params)
+            .map((row, metadata) -> row.get(0, Long.class).intValue())
+            .one();
+
+    return Mono.zip(data, count).map(tuple -> new SmartPageResult<>(tuple.getT1(), tuple.getT2()));
+  }
+
+  private <T> T extractRow(
+      SmartPageQuery<T> paginatedFilteredQuery, RowMapper rowMapper, io.r2dbc.spi.Row row) {
+    Map<String, Object> object = new HashMap<>();
+
+    row.getMetadata()
+        .getColumnMetadatas()
+        .forEach(
+            columnMetaData -> {
+              var javaProperty =
+                  ResolverUtils.getJavaProperty(
+                      paginatedFilteredQuery.targetClass(), columnMetaData.getName());
+              javaProperty.ifPresent(
+                  property -> object.put(property, row.get(columnMetaData.getName())));
             });
 
-    final var count =
-        this.jdbcTemplate.query(
-            jdbcQueryParser.getCountQuery(),
-            params,
-            rs -> {
-              rs.next();
-              return rs.getInt(1);
-            });
-
-    return new SmartPageResult<>(data, count);
+    return rowMapper.convert(object, paginatedFilteredQuery.targetClass());
   }
 
   private <T> List<T> extractResultSet(

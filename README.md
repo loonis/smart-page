@@ -1,3 +1,5 @@
+Forked from : https://github.com/narsha-io/smart-page
+
 <img width="1176" alt="smart-page" src="https://github.com/narsha-io/smart-page/assets/95120893/24c506b6-75db-44dd-b6af-c3bb2c14f3c6">
 
 
@@ -21,7 +23,8 @@ Using smart-page is very simple, you will only need to create a class representa
 
 
 Spring implementations: 
-- [SQL datasource](smart-page-spring/smart-page-spring-sql-example)
+- [SQL JDBC datasource](smart-page-spring/smart-page-spring-jdbc-example)
+- [SQL R2DBC datasource](smart-page-spring/smart-page-spring-r2dbc-example)
 - [Mongo datasource](smart-page-spring/smart-page-spring-mongo-example)
 
 ## How to contribute ? 🤓

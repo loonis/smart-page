@@ -1,5 +1,3 @@
-Forked from : https://github.com/narsha-io/smart-page
-
 <img width="1176" alt="smart-page" src="https://github.com/narsha-io/smart-page/assets/95120893/24c506b6-75db-44dd-b6af-c3bb2c14f3c6">
 
 

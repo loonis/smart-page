@@ -26,7 +26,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.mvc.method.annotation.PathVariableMapMethodArgumentResolver;
 
 /**
- * PaginatedFilteredQueryResolver which convert a http request into PaginatedFilteredQuery
+ * PaginatedFilteredQueryResolver which convert a http request into SmartPageQuery
  *
  * @param <T> kind of filter
  */

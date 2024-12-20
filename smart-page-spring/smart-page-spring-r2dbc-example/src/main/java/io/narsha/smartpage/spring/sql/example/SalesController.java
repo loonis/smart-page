@@ -6,8 +6,14 @@ import io.narsha.smartpage.spring.sql.example.dto.Sales;
 import io.narsha.smartpage.spring.sql.example.dto.SalesWithFilteredQuery;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.PagedModel;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
@@ -50,5 +56,28 @@ public class SalesController {
       SmartPageQuery<SalesWithFilteredQuery> query) {
     final var currentUserStore = "SEOUL"; // SecurityContext.getCurrentUserStore();
     return smartPage.asResponseEntity(query, Map.of("storeName", currentUserStore));
+  }
+
+  // Lambda function to create a self link
+  private static final Function<Object, Link> createSelfSalesLink =
+      (Object id) ->
+          WebMvcLinkBuilder.linkTo(
+                  WebMvcLinkBuilder.methodOn(SalesController.class).getSales((Long) id))
+              .withSelfRel();
+
+  //  // Lambda function to create next/previous page link
+  //  private static final Function<Object, Link> createAllSalesNextPageLink = (Object query) ->
+  //
+  // WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(SalesController.class).getAllSales((SmartPageQuery<Sales>) query)).withRel("next");
+
+  @GetMapping("/custom2")
+  public Mono<PagedModel<EntityModel<Sales>>> getAllSales(SmartPageQuery<Sales> query) {
+    return smartPage.asHateoasPageModel(query, createSelfSalesLink);
+  }
+
+  @GetMapping("/{id}")
+  public EntityModel<Sales> getSales(@PathVariable("id") Long id) {
+    // TODO
+    return null;
   }
 }

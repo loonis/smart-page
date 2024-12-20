@@ -1,8 +1,15 @@
 package io.narsha.smartpage.spring.core;
 
+import io.narsha.smartpage.core.EntityWithId;
 import io.narsha.smartpage.core.ReactiveQueryExecutor;
 import io.narsha.smartpage.core.SmartPageQuery;
+import io.narsha.smartpage.core.SmartPageResult;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Mono;
@@ -59,5 +66,64 @@ public abstract class ReactiveSmartPage<P> extends AbstractSmartPage<P> {
           final var headers = generatePaginationHeaders(query.page(), query.size(), r);
           return ResponseEntity.ok().headers(headers).body(r.data());
         });
+  }
+
+  public <T> Mono<PagedModel<EntityModel<T>>> asHateoasPageModel(
+      SmartPageQuery<T> query, Function<Object, Link> createSelfLink) {
+    return asHateoasPageModel(query, null, createSelfLink);
+  }
+
+  public <T> Mono<PagedModel<EntityModel<T>>> asHateoasPageModel(
+      SmartPageQuery<T> query, P extraParameters, Function<Object, Link> createSelfLink) {
+
+    Mono<SmartPageResult<T>> resultMono = executor.execute(query, extraParameters);
+
+    Mono<PagedModel<EntityModel<T>>> pagedModelMono =
+        resultMono.map(
+            result -> {
+              if (CollectionUtils.isEmpty(result.data())) {
+                return PagedModel.empty();
+              }
+
+              // Wrap each data in an EntityModel
+              List<EntityModel<T>> collect =
+                  result.data().stream()
+                      .map(
+                          entity -> {
+                            if (createSelfLink != null
+                                && entity instanceof EntityWithId entityWithId) {
+                              return EntityModel.of(
+                                  entity, createSelfLink.apply(entityWithId.getId()));
+                            }
+
+                            return EntityModel.of(entity);
+                          })
+                      .collect(Collectors.toList());
+
+              // Add pagination links
+              long pageSize = collect.size();
+              long pageNumber = query.page();
+              long totalElements = result.total();
+              long totalPage = totalElements / pageSize;
+              PagedModel.PageMetadata metadata =
+                  new PagedModel.PageMetadata(pageSize, pageNumber, result.total(), totalPage);
+              PagedModel<EntityModel<T>> pagedModel = PagedModel.of(collect, metadata);
+
+              //      if (pageNumber < totalPage - 1 && createNextPreviousLink!=null) {
+              //        Integer nextPage = query.page() + 1;
+              //        pagedModel.add(createNextPreviousLink.apply(copyQueryWithNewPage(query,
+              // nextPage)).withRel("next"));
+              //      }
+              //
+              //      if (pageNumber > 0 && createNextPreviousLink!=null) {
+              //        Integer prevPage = query.page() - 1;
+              //        pagedModel.add(createNextPreviousLink.apply(copyQueryWithNewPage(query,
+              // prevPage)).withRel("prev"));
+              //      }
+
+              return pagedModel;
+            });
+
+    return pagedModelMono;
   }
 }

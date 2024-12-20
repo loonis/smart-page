@@ -1,5 +1,6 @@
 package io.narsha.smartpage.spring.sql.example.dto;
 
+import io.narsha.smartpage.core.EntityWithId;
 import io.narsha.smartpage.core.annotations.DataTableProperty;
 import io.narsha.smartpage.spring.sql.SqlDataTable;
 import lombok.Getter;
@@ -17,7 +18,7 @@ import lombok.Setter;
         """)
 @Getter
 @Setter
-public class Sales {
+public class Sales implements EntityWithId {
 
   private Long itemId;
   private String itemName;
@@ -29,4 +30,9 @@ public class Sales {
 
   /** default constructor */
   public Sales() {}
+
+  @Override
+  public Object getId() {
+    return itemId;
+  }
 }
